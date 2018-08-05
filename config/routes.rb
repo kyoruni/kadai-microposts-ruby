@@ -10,4 +10,6 @@ Rails.application.routes.draw do
 
   # edit、destroy等を作らないために、onlyをつける
   resources :users, only: [:index, :show, :new, :create]
+
+  resources :microposts, only: [:create, :destroy]
 end

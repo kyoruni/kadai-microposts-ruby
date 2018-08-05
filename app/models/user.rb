@@ -15,4 +15,7 @@ class User < ApplicationRecord
 
   # パスワードを暗号化して保存する等
   has_secure_password
+
+  # UserからMicropostをみたとき、複数存在するのでhas_many:micropostsとする
+  has_many :microposts
 end
