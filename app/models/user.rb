@@ -3,7 +3,6 @@ class User < ApplicationRecord
   # ※ !をつけることで、自分自身を対象にする
   before_save { self.email.downcase! }
 
-  # 空欄不可、50桁まで
   validates :name, presence: true, length: { maximum: 50 }
 
   # 空欄不可、255桁まで
@@ -16,17 +15,15 @@ class User < ApplicationRecord
   # パスワードを暗号化して保存する等
   has_secure_password
 
-  # UserからMicropost/relationshipsをみたとき、複数存在するのでhas_many:microposts/relationthipとする
   has_many :microposts
   has_many :relationships
 
-  # relationshipからuserをみたときも、複数存在する
-  has_many :reverses_of_relationship, class_name: 'Relationship', foreign_key: 'follow_id'
-
-  # has_many: relationships/reverses_of_relationshipの結果を中間テーブルとして指定
-  #  参照先のidを:follow/userとする
   has_many :followings, through: :relationships, source: :follow
   has_many :followers, through: :reverses_of_relationship, source: :user
+  has_many :reverses_of_relationship, class_name: 'Relationship', foreign_key: 'follow_id'
+
+  has_many :likes
+  has_many :liked_microposts, through: :likes, source: :micropost
 
   # フォローしようとしている other_user が自分自身ではないかを検証
   # 見つかれば Relation を返し、見つからなければフォロー関係をcreate(build + save)
@@ -36,9 +33,9 @@ class User < ApplicationRecord
     end
   end
 
+  # relationshipが存在すればdestroy
   def unfollow(other_user)
     relationship = self.relationships.find_by(follow_id: other_user.id)
-    # relationshipが存在すればdestroy
     relationship.destroy if relationship
   end
 
@@ -52,5 +49,21 @@ class User < ApplicationRecord
   # フォローユーザ + 自分自身のポストを取得する
   def feed_microposts
     Micropost.where(user_id: self.following_ids + [self.id])
+  end
+
+  # お気に入り登録 / 既にお気に入り登録していなければ、お気に入りへ追加する
+  def add_like(liked_micropost_id)
+    self.likes.find_or_create_by(user_id: self.id, micropost_id: liked_micropost_id.id)
+  end
+
+  # お気に入り削除 / 既にお気に入り登録していたら、お気に入りから削除する
+  def del_like(liked_micropost_id)
+    like = self.likes.find_by(user_id: self.id, micropost_id: liked_micropost_id.id)
+    like.destroy if like
+  end
+
+  # お気に入り確認 / 既にお気に入り登録していたらtrue、していなければfalse
+  def liked?(liked_micropost)
+    self.liked_microposts.include?(liked_micropost)
   end
 end
